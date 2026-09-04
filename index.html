@@ -210,7 +210,7 @@
       </div>
       <div class="flex gap-3">
         <span class="text-[10px] mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-full" style="background:var(--copper);color:#14151b;">2</span>
-        <p class="text-sm text-[var(--text-dim)] leading-relaxed"><span class="text-[var(--text)] font-medium">Custo de vida sob controle.</span> Tudo que ultrapassar o limite mensal no mês vai direto para abater o topo da lista.</p>
+        <p class="text-sm text-[var(--text-dim)] leading-relaxed"><span class="text-[var(--text)] font-medium">Custo de vida sob controle.</span> Tudo que ultrapassar <span id="rule-living-cost" class="text-[var(--text)] num">R$ 0,00</span> no mês vai direto para abater o topo da lista.</p>
       </div>
       <div class="flex gap-3">
         <span class="text-[10px] mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-full" style="background:var(--teal);color:#14151b;">3</span>
@@ -271,7 +271,10 @@
   <div class="card p-5 w-full max-w-xs space-y-3">
     <h3 class="serif text-lg" id="modal-title">Nova dívida</h3>
     <input type="text" id="debt-name" placeholder="Nome" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-faint)]">
-    <input type="number" step="0.01" id="debt-amount" placeholder="Valor total (R$)" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-faint)]">
+    <label class="block">
+      <span class="text-[11px] text-[var(--text-dim)]" id="debt-amount-label">Valor total (R$)</span>
+      <input type="number" step="0.01" id="debt-amount" placeholder="0,00" class="w-full mt-1 bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-faint)]">
+    </label>
     <select id="debt-category" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm text-[var(--text)]">
       <option value="pessoa">Pessoa — alta prioridade</option>
       <option value="instituicao">Instituição — média</option>
@@ -384,7 +387,7 @@ function saveState(){
 
 function confirmReset(){
   if(confirm("Isso apaga todos os ganhos, dívidas quitadas e restaura a lista original. Continuar?")){
-    try{ localStorage.clear(); } catch(e){ storageOk = false; }
+    try{ localStorage.removeItem('fin_state_v2'); } catch(e){ storageOk = false; }
     state = buildDefaultState();
     saveState();
     switchTab('dashboard');
@@ -404,9 +407,11 @@ function switchTab(tab){
     document.getElementById('settings-monthly-goal').value = state.settings.monthlyGoal;
     document.getElementById('settings-living-cost').value = state.settings.livingCost;
   }
-  if(tab === 'calendar' && !state.calendarView){
-    const now = new Date();
-    state.calendarView = { year: now.getFullYear(), month: now.getMonth() };
+  if(tab === 'calendar'){
+    if(!state.calendarView){
+      const now = new Date();
+      state.calendarView = { year: now.getFullYear(), month: now.getMonth() };
+    }
     renderCalendar();
   }
 }
@@ -439,6 +444,7 @@ function brl(n){
 
 function toggleDebtModal(prefillId){
   const modal = document.getElementById('debt-modal');
+  const amountLabel = document.getElementById('debt-amount-label');
   if(modal.classList.contains('hidden')){
     if(prefillId){
       const d = state.debts.find(x=>x.id===prefillId);
@@ -448,6 +454,7 @@ function toggleDebtModal(prefillId){
       document.getElementById('debt-amount').value = d.amount;
       document.getElementById('debt-category').value = d.category;
       document.getElementById('debt-due-date').value = d.dueDate || '';
+      amountLabel.innerText = 'Saldo devedor atual (R$)';
     } else {
       editingDebtId = null;
       document.getElementById('modal-title').innerText = 'Nova dívida';
@@ -455,6 +462,7 @@ function toggleDebtModal(prefillId){
       document.getElementById('debt-amount').value = '';
       document.getElementById('debt-category').value = 'pessoa';
       document.getElementById('debt-due-date').value = '';
+      amountLabel.innerText = 'Valor total (R$)';
     }
     modal.classList.remove('hidden');
   } else {
@@ -470,7 +478,12 @@ function saveDebt(){
   if(!name || !(amount > 0)) return;
 
   if(editingDebtId){
-    state.debts = state.debts.map(d => d.id === editingDebtId ? { ...d, name, amount, category, dueDate } : d);
+    const current = state.debts.find(d => d.id === editingDebtId);
+    const delta = amount - current.amount;
+    state.debts = state.debts.map(d => d.id === editingDebtId
+      ? { ...d, name, amount, originalAmount: d.originalAmount + delta, category, dueDate }
+      : d);
+    state.totalOriginalDebt += delta;
   } else {
     state.debts.push({ id: generateId(), name, amount, originalAmount: amount, category, dueDate });
     state.totalOriginalDebt += amount;
@@ -488,11 +501,28 @@ function deleteDebt(id){
   }
 }
 
+function parseBRLInput(str){
+  if(!str) return NaN;
+  let s = str.trim();
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+  if(hasComma && hasDot){
+    if(s.lastIndexOf(',') > s.lastIndexOf('.')){
+      s = s.replace(/\./g, '').replace(',', '.'); // 1.234,56 -> 1234.56
+    } else {
+      s = s.replace(/,/g, ''); // 1,234.56 -> 1234.56
+    }
+  } else if(hasComma){
+    s = s.replace(',', '.'); // 1234,56 -> 1234.56
+  }
+  return parseFloat(s);
+}
+
 function payPartialDebt(id){
   const debt = state.debts.find(d => d.id === id);
   const amount = prompt(`Quanto foi abatido de "${debt.name}"? (R$)`);
   if(amount === null) return;
-  const val = parseFloat(amount.replace(',', '.'));
+  const val = parseBRLInput(amount);
   if(val > 0){
     const newAmount = Math.max(0, debt.amount - val);
     if(newAmount <= 0.005){
@@ -721,13 +751,17 @@ function render(){
   // Streak
   let streak = 0;
   let cursor = new Date();
+  const todayPending = dayTotal(today) < goal;
+  if(todayPending) cursor.setDate(cursor.getDate() - 1); // hoje ainda não fechou, não zera a sequência por isso
   while(true){
     const iso = cursor.getFullYear() + '-' + String(cursor.getMonth()+1).padStart(2,'0') + '-' + String(cursor.getDate()).padStart(2,'0');
     if(dayTotal(iso) >= goal && goal > 0){ streak++; cursor.setDate(cursor.getDate()-1); }
     else break;
   }
   document.getElementById('streak-count').innerText = `${streak} ${streak===1 ? 'dia' : 'dias'}`;
-  document.getElementById('streak-label').innerText = streak > 0 ? 'seguidos batendo a meta' : 'bata a meta hoje para começar';
+  document.getElementById('streak-label').innerText = streak > 0
+    ? (todayPending ? 'em jogo — bata a meta hoje pra manter' : 'seguidos batendo a meta')
+    : 'bata a meta hoje para começar';
 
   // Week chart
   const days = [];
@@ -887,6 +921,8 @@ function render(){
   // Plan tab paces
   document.getElementById('plan-pace-22').innerText = `${brl(state.settings.monthlyGoal/22)} / dia`;
   document.getElementById('plan-pace-30').innerText = `${brl(state.settings.monthlyGoal/30)} / dia`;
+  const ruleLivingCost = document.getElementById('rule-living-cost');
+  if(ruleLivingCost) ruleLivingCost.innerText = brl(state.settings.livingCost);
 
   if(document.getElementById('tab-calendar') && !document.getElementById('tab-calendar').classList.contains('hidden')){
     renderCalendar();
