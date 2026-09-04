@@ -14,33 +14,42 @@
     --bg:#14151b;
     --surface:#1c1e26;
     --surface-2:#23252f;
+    --surface-3:#2a2c38;
     --line:#2f313d;
     --copper:#c98a55;
-    --copper-dim:#8a6440;
+    --copper-soft:#c98a5522;
     --teal:#5fa697;
+    --teal-soft:#5fa69722;
     --danger:#c1584f;
+    --danger-soft:#c1584f22;
     --text:#ece9e2;
     --text-dim:#93949f;
+    --text-faint:#5d5f6a;
   }
-  *{-webkit-tap-highlight-color:transparent;}
+  *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
   body{
     background:var(--bg);
     color:var(--text);
     font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
     min-height:100vh;
-    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+    padding-bottom:calc(78px + env(safe-area-inset-bottom));
   }
   .serif{font-family:'Fraunces',serif;}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;}
   .divider{border-color:var(--line);}
   ::-webkit-scrollbar{display:none;}
-  .tabpanel{animation:rise .35s ease both;}
+  .tabpanel{animation:rise .32s ease both;}
   @keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   @media (prefers-reduced-motion: reduce){.tabpanel{animation:none;}}
   input:focus, select:focus{outline:none;border-color:var(--copper);}
-  .nav-btn{color:var(--text-dim);transition:color .2s ease;}
+  .nav-btn{color:var(--text-faint);transition:color .2s ease;}
   .nav-btn.active{color:var(--copper);}
   .num{font-variant-numeric:tabular-nums;}
+  .day-cell{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;position:relative;transition:transform .12s ease;}
+  .day-cell:active{transform:scale(0.93);}
+  .btn-primary{background:var(--copper);color:#14151b;}
+  .btn-ghost{border:1px solid var(--line);color:var(--text-dim);background:transparent;}
+  .modal-backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(6px);}
 </style>
 </head>
 <body>
@@ -48,17 +57,19 @@
 <header class="sticky top-0 z-10 backdrop-blur-md bg-[#14151bcc] border-b divider px-5 pt-5 pb-4">
   <div class="max-w-md mx-auto flex items-end justify-between">
     <div>
-      <p class="text-[11px] tracking-wide text-[var(--text-dim)]" id="header-date">—</p>
+      <p class="text-[11px] tracking-wide text-[var(--text-dim)] capitalize" id="header-date">—</p>
       <h1 class="serif text-2xl leading-none mt-1">Plano de quitação</h1>
     </div>
-    <button onclick="confirmReset()" class="text-[11px] text-[var(--text-dim)] border divider rounded-full px-3 py-1.5 hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors">Reiniciar</button>
+    <button onclick="switchTab('settings')" class="w-8 h-8 flex items-center justify-center rounded-full border divider text-[var(--text-dim)]">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1h.1a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+    </button>
   </div>
 </header>
 
 <main class="max-w-md mx-auto px-5 pt-5 space-y-5">
 
-  <div id="storage-warning" class="hidden text-[12px] rounded-xl px-3 py-2.5" style="background:#c1584f22;border:1px solid var(--danger);color:var(--danger);">
-    Este navegador está bloqueando o armazenamento local. Os botões funcionam, mas os dados não vão ficar salvos ao fechar a página — abra o arquivo direto no Safari/Chrome (fora de uma pré-visualização) para salvar de verdade.
+  <div id="storage-warning" class="hidden text-[12px] rounded-xl px-3 py-2.5" style="background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger);">
+    Este navegador está bloqueando o armazenamento local. Os dados não vão ficar salvos ao fechar a página.
   </div>
 
   <!-- DASHBOARD -->
@@ -80,8 +91,8 @@
 
       <form onsubmit="handleAddIncome(event)" class="mt-4 flex gap-2">
         <input type="number" step="0.01" min="0.01" id="income-amount" placeholder="Registrar ganho de hoje" required
-          class="flex-1 bg-[var(--surface-2)] border divider rounded-xl px-3 py-2.5 text-sm placeholder-[var(--text-dim)]">
-        <button type="submit" class="px-4 rounded-xl text-sm font-medium" style="background:var(--copper);color:#14151b;">Add</button>
+          class="flex-1 bg-[var(--surface-2)] border divider rounded-xl px-3 py-2.5 text-sm placeholder-[var(--text-faint)]">
+        <button type="submit" class="px-4 rounded-xl text-sm font-medium btn-primary">Add</button>
       </form>
     </div>
 
@@ -92,10 +103,34 @@
         <p class="text-[10px] text-[var(--text-dim)] mt-1" id="month-pace">—</p>
       </div>
       <div class="card p-4">
-        <p class="text-[11px] text-[var(--text-dim)]">Total em dívidas</p>
-        <p class="serif text-xl mt-1 num" style="color:var(--danger);" id="total-debts-active">R$ 0,00</p>
-        <p class="text-[10px] text-[var(--text-dim)] mt-1" id="debts-count-label">—</p>
+        <p class="text-[11px] text-[var(--text-dim)]">Sequência de metas</p>
+        <p class="serif text-xl mt-1 num" style="color:var(--teal);" id="streak-count">0 dias</p>
+        <p class="text-[10px] text-[var(--text-dim)] mt-1" id="streak-label">comece hoje</p>
       </div>
+    </div>
+
+    <div class="card p-4">
+      <div class="flex justify-between items-baseline mb-3">
+        <h3 class="text-[11px] tracking-wide text-[var(--text-dim)]">Últimos 7 dias</h3>
+        <span class="text-[10px] text-[var(--text-faint)]">linha = meta diária</span>
+      </div>
+      <div id="week-chart" class="flex items-end gap-2" style="height:72px;"></div>
+    </div>
+
+    <div class="card p-4">
+      <div class="flex justify-between items-baseline mb-3">
+        <h3 class="text-[11px] tracking-wide text-[var(--text-dim)]">Progresso geral da dívida</h3>
+        <span class="text-[12px] num" id="overall-pct" style="color:var(--copper);">0%</span>
+      </div>
+      <div class="w-full h-2.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+        <div id="overall-bar" class="h-full rounded-full" style="width:0%;background:linear-gradient(90deg,var(--teal),var(--copper));"></div>
+      </div>
+      <p class="text-[10px] text-[var(--text-dim)] mt-2" id="overall-detail">—</p>
+    </div>
+
+    <div id="upcoming-section" class="card p-4 hidden">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)] mb-3">Próximos vencimentos</h3>
+      <div id="upcoming-list" class="space-y-2"></div>
     </div>
 
     <div class="card p-4">
@@ -116,6 +151,52 @@
       <button onclick="toggleDebtModal()" class="text-[12px] border rounded-full px-3 py-1.5" style="border-color:var(--copper);color:var(--copper);">Nova dívida</button>
     </div>
     <div id="debts-list" class="space-y-3"></div>
+    <div id="paid-off-section" class="hidden space-y-2 pt-2">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)]">Quitadas</h3>
+      <div id="paid-off-list" class="space-y-2"></div>
+    </div>
+  </section>
+
+  <!-- CALENDÁRIO -->
+  <section id="tab-calendar" class="tabpanel space-y-4 hidden">
+    <div class="flex items-center justify-between">
+      <button onclick="shiftMonth(-1)" class="w-8 h-8 flex items-center justify-center rounded-full border divider text-[var(--text-dim)]">‹</button>
+      <h2 class="serif text-lg capitalize" id="calendar-title">—</h2>
+      <button onclick="shiftMonth(1)" class="w-8 h-8 flex items-center justify-center rounded-full border divider text-[var(--text-dim)]">›</button>
+    </div>
+
+    <div class="card p-4">
+      <div class="grid grid-cols-7 gap-1.5 mb-2">
+        <span class="text-center text-[10px] text-[var(--text-faint)]">D</span>
+        <span class="text-center text-[10px] text-[var(--text-faint)]">S</span>
+        <span class="text-center text-[10px] text-[var(--text-faint)]">T</span>
+        <span class="text-center text-[10px] text-[var(--text-faint)]">Q</span>
+        <span class="text-center text-[10px] text-[var(--text-faint)]">Q</span>
+        <span class="text-center text-[10px] text-[var(--text-faint)]">S</span>
+        <span class="text-center text-[10px] text-[var(--text-faint)]">S</span>
+      </div>
+      <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
+      <div class="flex gap-4 mt-4 text-[10px] text-[var(--text-dim)]">
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:var(--teal);"></span> meta batida</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block border" style="border-color:var(--copper);"></span> parcial</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block" style="background:var(--surface-3);"></span> sem registro</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full inline-block" style="background:var(--danger);"></span> conta vence</span>
+      </div>
+    </div>
+
+    <div id="day-panel" class="card p-4 hidden">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-sm font-medium capitalize" id="day-panel-title">—</h3>
+        <span class="serif num" id="day-panel-total">R$ 0,00</span>
+      </div>
+      <div id="day-panel-due" class="hidden mb-3"></div>
+      <div id="day-panel-entries" class="space-y-2 mb-3"></div>
+      <form onsubmit="handleAddIncomeForDay(event)" class="flex gap-2">
+        <input type="number" step="0.01" min="0.01" id="day-income-amount" placeholder="Adicionar ganho neste dia" required
+          class="flex-1 bg-[var(--surface-2)] border divider rounded-xl px-3 py-2.5 text-sm placeholder-[var(--text-faint)]">
+        <button type="submit" class="px-4 rounded-xl text-sm font-medium btn-primary">Add</button>
+      </form>
+    </div>
   </section>
 
   <!-- PLANO -->
@@ -129,7 +210,7 @@
       </div>
       <div class="flex gap-3">
         <span class="text-[10px] mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-full" style="background:var(--copper);color:#14151b;">2</span>
-        <p class="text-sm text-[var(--text-dim)] leading-relaxed"><span class="text-[var(--text)] font-medium">Custo de vida travado em R$ 2.500.</span> Tudo que ultrapassar isso no mês vai direto para abater o topo da lista.</p>
+        <p class="text-sm text-[var(--text-dim)] leading-relaxed"><span class="text-[var(--text)] font-medium">Custo de vida sob controle.</span> Tudo que ultrapassar o limite mensal no mês vai direto para abater o topo da lista.</p>
       </div>
       <div class="flex gap-3">
         <span class="text-[10px] mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-full" style="background:var(--teal);color:#14151b;">3</span>
@@ -141,67 +222,101 @@
       <h3 class="text-[11px] tracking-wide text-[var(--text-dim)] mb-3">Metas de produção diária</h3>
       <div class="flex justify-between py-2 border-b divider text-sm">
         <span class="text-[var(--text-dim)]">22 dias úteis / mês</span>
-        <strong class="num" style="color:var(--copper);">R$ 181,81 / dia</strong>
+        <strong class="num" style="color:var(--copper);" id="plan-pace-22">R$ 0,00 / dia</strong>
       </div>
       <div class="flex justify-between py-2 text-sm">
         <span class="text-[var(--text-dim)]">30 dias corridos / mês</span>
-        <strong class="num" style="color:var(--copper);">R$ 133,33 / dia</strong>
+        <strong class="num" style="color:var(--copper);" id="plan-pace-30">R$ 0,00 / dia</strong>
       </div>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="tab-settings" class="tabpanel space-y-4 hidden">
+    <h2 class="serif text-lg">Ajustes</h2>
+
+    <div class="card p-4 space-y-3">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)]">Metas</h3>
+      <label class="block text-sm">
+        <span class="text-[var(--text-dim)] text-[12px]">Meta mensal (R$)</span>
+        <input type="number" step="1" id="settings-monthly-goal" class="w-full mt-1 bg-[var(--surface-2)] border divider rounded-xl p-2.5 text-sm">
+      </label>
+      <label class="block text-sm">
+        <span class="text-[var(--text-dim)] text-[12px]">Custo de vida mensal (R$)</span>
+        <input type="number" step="1" id="settings-living-cost" class="w-full mt-1 bg-[var(--surface-2)] border divider rounded-xl p-2.5 text-sm">
+      </label>
+      <p class="text-[10px] text-[var(--text-faint)]">A meta diária é recalculada automaticamente: meta mensal ÷ 30.</p>
+      <button onclick="saveSettings()" class="w-full rounded-xl py-2.5 text-sm font-medium btn-primary">Salvar ajustes</button>
+    </div>
+
+    <div class="card p-4 space-y-3">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)]">Backup</h3>
+      <p class="text-[12px] text-[var(--text-dim)] leading-relaxed">Os dados ficam só neste aparelho. Exporte um backup de vez em quando, ou antes de trocar de celular.</p>
+      <div class="flex gap-2">
+        <button onclick="exportBackup()" class="flex-1 btn-ghost rounded-xl py-2.5 text-sm">Exportar backup</button>
+        <button onclick="document.getElementById('import-file').click()" class="flex-1 btn-ghost rounded-xl py-2.5 text-sm">Importar backup</button>
+      </div>
+      <input type="file" id="import-file" accept="application/json" class="hidden" onchange="importBackup(event)">
+    </div>
+
+    <div class="card p-4 space-y-2">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)]">Zona de risco</h3>
+      <button onclick="confirmReset()" class="w-full rounded-xl py-2.5 text-sm" style="border:1px solid var(--danger);color:var(--danger);">Reiniciar tudo</button>
     </div>
   </section>
 </main>
 
 <!-- MODAL NOVA / EDITAR DÍVIDA -->
-<div id="debt-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-5 hidden">
+<div id="debt-modal" class="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-5 hidden">
   <div class="card p-5 w-full max-w-xs space-y-3">
     <h3 class="serif text-lg" id="modal-title">Nova dívida</h3>
-    <input type="text" id="debt-name" placeholder="Nome" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-dim)]">
-    <input type="number" step="0.01" id="debt-amount" placeholder="Valor total (R$)" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-dim)]">
+    <input type="text" id="debt-name" placeholder="Nome" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-faint)]">
+    <input type="number" step="0.01" id="debt-amount" placeholder="Valor total (R$)" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-faint)]">
     <select id="debt-category" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm text-[var(--text)]">
       <option value="pessoa">Pessoa — alta prioridade</option>
       <option value="instituicao">Instituição — média</option>
       <option value="geladeira">Geladeira — aguardar</option>
     </select>
+    <label class="block">
+      <span class="text-[11px] text-[var(--text-dim)]">Data de vencimento (opcional)</span>
+      <input type="date" id="debt-due-date" class="w-full mt-1 bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm text-[var(--text)]">
+    </label>
     <div class="flex gap-2 pt-1">
-      <button onclick="toggleDebtModal()" class="flex-1 border divider rounded-xl py-2.5 text-sm text-[var(--text-dim)]">Cancelar</button>
-      <button onclick="saveDebt()" class="flex-1 rounded-xl py-2.5 text-sm font-medium" style="background:var(--copper);color:#14151b;">Salvar</button>
+      <button onclick="toggleDebtModal()" class="flex-1 btn-ghost rounded-xl py-2.5 text-sm">Cancelar</button>
+      <button onclick="saveDebt()" class="flex-1 rounded-xl py-2.5 text-sm font-medium btn-primary">Salvar</button>
     </div>
   </div>
 </div>
 
-<nav class="fixed bottom-0 left-0 right-0 bg-[#1c1e26ee] backdrop-blur-md border-t divider px-8 py-2.5 flex justify-around max-w-md mx-auto" style="padding-bottom:calc(10px + env(safe-area-inset-bottom));">
+<nav class="fixed bottom-0 left-0 right-0 bg-[#1c1e26ee] backdrop-blur-md border-t divider px-3 py-2.5 flex justify-around max-w-md mx-auto" style="padding-bottom:calc(10px + env(safe-area-inset-bottom));">
   <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active flex flex-col items-center gap-1 py-1 w-16">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>
     <span class="text-[10px]">Painel</span>
   </button>
   <button onclick="switchTab('debts')" id="nav-debts" class="nav-btn flex flex-col items-center gap-1 py-1 w-16">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18v12a1 1 0 01-1 1H4a1 1 0 01-1-1V7z"/><path d="M3 7l3-4h12l3 4"/><circle cx="16" cy="13" r="1.3"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18v12a1 1 0 01-1 1H4a1 1 0 01-1-1V7z"/><path d="M3 7l3-4h12l3 4"/><circle cx="16" cy="13" r="1.3"/></svg>
     <span class="text-[10px]">Dívidas</span>
   </button>
+  <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center gap-1 py-1 w-16">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    <span class="text-[10px]">Calendário</span>
+  </button>
   <button onclick="switchTab('plan')" id="nav-plan" class="nav-btn flex flex-col items-center gap-1 py-1 w-16">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>
     <span class="text-[10px]">Plano</span>
   </button>
 </nav>
 
 <script>
 const DEFAULT_DEBTS = [
-  { id: 1, name: "Levi", amount: 400.00, category: "pessoa" },
-  { id: 2, name: "Mãe", amount: 608.81, category: "pessoa" },
-  { id: 3, name: "Bárbara", amount: 600.00, category: "pessoa" },
-  { id: 4, name: "Jeitto", amount: 710.35, category: "instituicao" },
-  { id: 5, name: "Infinity (set/out/nov)", amount: 2027.91, category: "instituicao" },
-  { id: 6, name: "Nubank", amount: 3440.00, category: "geladeira" },
-  { id: 7, name: "PicPay", amount: 1600.00, category: "geladeira" }
+  { name: "Levi", amount: 400.00, category: "pessoa" },
+  { name: "Mãe", amount: 608.81, category: "pessoa" },
+  { name: "Bárbara", amount: 600.00, category: "pessoa" },
+  { name: "Jeitto", amount: 710.35, category: "instituicao" },
+  { name: "Infinity (set/out/nov)", amount: 2027.91, category: "instituicao" },
+  { name: "Nubank", amount: 3440.00, category: "geladeira" },
+  { name: "PicPay", amount: 1600.00, category: "geladeira" }
 ];
-
-let state = {
-  debts: safeParse('fin_debts', DEFAULT_DEBTS),
-  incomes: safeParse('fin_incomes', []),
-  dailyGoal: 133.33,
-  monthlyGoal: 4000
-};
-let editingDebtId = null;
 
 let storageOk = true;
 
@@ -209,49 +324,108 @@ function safeParse(key, fallback){
   try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
   catch(e){ storageOk = false; return fallback; }
 }
-
 function safeSet(key, value){
   try{ localStorage.setItem(key, value); }
   catch(e){ storageOk = false; }
 }
 
+function buildDefaultState(){
+  const debts = DEFAULT_DEBTS.map((d,i) => ({
+    id: 1000 + i, name: d.name, amount: d.amount, originalAmount: d.amount, category: d.category, dueDate: null
+  }));
+  return {
+    debts,
+    incomes: [],
+    paidOffDebts: [],
+    settings: { monthlyGoal: 4000, livingCost: 2500 },
+    totalOriginalDebt: debts.reduce((a,d)=>a+d.amount,0),
+    calendarView: null
+  };
+}
+
+function migrate(raw){
+  const base = buildDefaultState();
+  if(!raw) return base;
+  const debts = (raw.debts || base.debts).map(d => ({
+    id: d.id ?? generateId(),
+    name: d.name,
+    amount: d.amount,
+    originalAmount: d.originalAmount ?? d.amount,
+    category: d.category,
+    dueDate: d.dueDate ?? null
+  }));
+  const incomes = (raw.incomes || []).map(i => ({
+    id: i.id ?? generateId(),
+    amount: i.amount,
+    date: i.date
+  }));
+  const totalOriginalDebt = raw.totalOriginalDebt ??
+    (debts.reduce((a,d)=>a+d.originalAmount,0) + (raw.paidOffDebts||[]).reduce((a,d)=>a+(d.originalAmount||0),0));
+  return {
+    debts,
+    incomes,
+    paidOffDebts: raw.paidOffDebts || [],
+    settings: raw.settings || base.settings,
+    totalOriginalDebt,
+    calendarView: null
+  };
+}
+
+function generateId(){ return Date.now() + Math.floor(Math.random()*1000); }
+
+let state = migrate(safeParse('fin_state_v2', null));
+let editingDebtId = null;
+let selectedDay = null;
+
 function saveState(){
-  // Never let a storage failure block the UI from updating.
-  safeSet('fin_debts', JSON.stringify(state.debts));
-  safeSet('fin_incomes', JSON.stringify(state.incomes));
+  safeSet('fin_state_v2', JSON.stringify(state));
   render();
 }
 
 function confirmReset(){
-  if(confirm("Isso apaga todos os ganhos registrados e restaura a lista de dívidas original. Continuar?")){
+  if(confirm("Isso apaga todos os ganhos, dívidas quitadas e restaura a lista original. Continuar?")){
     try{ localStorage.clear(); } catch(e){ storageOk = false; }
-    state.debts = JSON.parse(JSON.stringify(DEFAULT_DEBTS));
-    state.incomes = [];
+    state = buildDefaultState();
     saveState();
+    switchTab('dashboard');
   }
 }
 
 function switchTab(tab){
-  ['dashboard','debts','plan'].forEach(t=>{
+  ['dashboard','debts','calendar','plan','settings'].forEach(t=>{
     document.getElementById(`tab-${t}`).classList.add('hidden');
-    document.getElementById(`nav-${t}`).classList.remove('active');
+    const nav = document.getElementById(`nav-${t}`);
+    if(nav) nav.classList.remove('active');
   });
   document.getElementById(`tab-${tab}`).classList.remove('hidden');
-  document.getElementById(`nav-${tab}`).classList.add('active');
+  const nav = document.getElementById(`nav-${tab}`);
+  if(nav) nav.classList.add('active');
+  if(tab === 'settings'){
+    document.getElementById('settings-monthly-goal').value = state.settings.monthlyGoal;
+    document.getElementById('settings-living-cost').value = state.settings.livingCost;
+  }
+  if(tab === 'calendar' && !state.calendarView){
+    const now = new Date();
+    state.calendarView = { year: now.getFullYear(), month: now.getMonth() };
+    renderCalendar();
+  }
 }
+
+function dailyGoal(){ return state.settings.monthlyGoal / 30; }
 
 function todayISO(){
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function monthKey(iso){ return iso.slice(0,7); }
+function dayTotal(iso){ return state.incomes.filter(i=>i.date===iso).reduce((a,i)=>a+i.amount,0); }
 
 function handleAddIncome(e){
   e.preventDefault();
   const input = document.getElementById('income-amount');
   const val = parseFloat(input.value);
   if(val > 0){
-    state.incomes.push({ amount: val, date: todayISO() });
+    state.incomes.push({ id: generateId(), amount: val, date: todayISO() });
     input.value = '';
     saveState();
   }
@@ -260,6 +434,8 @@ function handleAddIncome(e){
 function brl(n){
   return n.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
 }
+
+// ---------- Debts ----------
 
 function toggleDebtModal(prefillId){
   const modal = document.getElementById('debt-modal');
@@ -271,12 +447,14 @@ function toggleDebtModal(prefillId){
       document.getElementById('debt-name').value = d.name;
       document.getElementById('debt-amount').value = d.amount;
       document.getElementById('debt-category').value = d.category;
+      document.getElementById('debt-due-date').value = d.dueDate || '';
     } else {
       editingDebtId = null;
       document.getElementById('modal-title').innerText = 'Nova dívida';
       document.getElementById('debt-name').value = '';
       document.getElementById('debt-amount').value = '';
       document.getElementById('debt-category').value = 'pessoa';
+      document.getElementById('debt-due-date').value = '';
     }
     modal.classList.remove('hidden');
   } else {
@@ -288,19 +466,23 @@ function saveDebt(){
   const name = document.getElementById('debt-name').value.trim();
   const amount = parseFloat(document.getElementById('debt-amount').value);
   const category = document.getElementById('debt-category').value;
+  const dueDate = document.getElementById('debt-due-date').value || null;
   if(!name || !(amount > 0)) return;
 
   if(editingDebtId){
-    state.debts = state.debts.map(d => d.id === editingDebtId ? { ...d, name, amount, category } : d);
+    state.debts = state.debts.map(d => d.id === editingDebtId ? { ...d, name, amount, category, dueDate } : d);
   } else {
-    state.debts.push({ id: Date.now(), name, amount, category });
+    state.debts.push({ id: generateId(), name, amount, originalAmount: amount, category, dueDate });
+    state.totalOriginalDebt += amount;
   }
   toggleDebtModal();
   saveState();
 }
 
 function deleteDebt(id){
-  if(confirm("Remover esta dívida da lista?")){
+  if(confirm("Remover esta dívida da lista? (isso não conta como quitação)")){
+    const d = state.debts.find(x=>x.id===id);
+    if(d) state.totalOriginalDebt -= d.originalAmount;
     state.debts = state.debts.filter(d => d.id !== id);
     saveState();
   }
@@ -312,9 +494,13 @@ function payPartialDebt(id){
   if(amount === null) return;
   const val = parseFloat(amount.replace(',', '.'));
   if(val > 0){
-    state.debts = state.debts
-      .map(d => d.id === id ? { ...d, amount: Math.max(0, d.amount - val) } : d)
-      .filter(d => d.amount > 0.005);
+    const newAmount = Math.max(0, debt.amount - val);
+    if(newAmount <= 0.005){
+      state.paidOffDebts.unshift({ name: debt.name, originalAmount: debt.originalAmount, category: debt.category, paidOffDate: todayISO() });
+      state.debts = state.debts.filter(d => d.id !== id);
+    } else {
+      state.debts = state.debts.map(d => d.id === id ? { ...d, amount: newAmount } : d);
+    }
     saveState();
   }
 }
@@ -326,10 +512,186 @@ const CATEGORY_META = {
 };
 const CATEGORY_ORDER = ['pessoa', 'instituicao', 'geladeira'];
 
+// ---------- Calendar ----------
+
+function shiftMonth(delta){
+  let { year, month } = state.calendarView;
+  month += delta;
+  if(month < 0){ month = 11; year -= 1; }
+  if(month > 11){ month = 0; year += 1; }
+  state.calendarView = { year, month };
+  selectedDay = null;
+  renderCalendar();
+}
+
+function renderCalendar(){
+  if(!state.calendarView) return;
+  const { year, month } = state.calendarView;
+  const monthNames = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  document.getElementById('calendar-title').innerText = `${monthNames[month]} de ${year}`;
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const goal = dailyGoal();
+  const today = todayISO();
+
+  let html = '';
+  for(let i=0; i<startOffset; i++){ html += `<div></div>`; }
+  for(let d=1; d<=daysInMonth; d++){
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const total = dayTotal(iso);
+    const dueHere = state.debts.filter(x => x.dueDate === iso);
+    let style, extra = '';
+    if(total >= goal && goal > 0){ style = `background:var(--teal);color:#14151b;font-weight:600;`; }
+    else if(total > 0){ style = `border:1.5px solid var(--copper);color:var(--copper);font-weight:600;`; }
+    else { style = `background:var(--surface-3);color:var(--text-faint);`; }
+    if(iso === today){ extra = 'box-shadow:0 0 0 2px var(--bg), 0 0 0 3.5px var(--text-dim);'; }
+    const marker = dueHere.length > 0
+      ? `<span style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--danger);"></span>`
+      : '';
+    html += `<button onclick="selectDay('${iso}')" class="day-cell" style="${style}${extra}">${d}${marker}</button>`;
+  }
+  document.getElementById('calendar-grid').innerHTML = html;
+
+  if(selectedDay) renderDayPanel();
+}
+
+function selectDay(iso){
+  selectedDay = iso;
+  renderDayPanel();
+}
+
+function goToDueDate(iso){
+  const [y,m] = iso.split('-').map(Number);
+  state.calendarView = { year: y, month: m - 1 };
+  switchTab('calendar');
+  selectDay(iso);
+  renderCalendar();
+}
+
+function renderDayPanel(){
+  const panel = document.getElementById('day-panel');
+  if(!selectedDay){ panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  const [y,m,d] = selectedDay.split('-').map(Number);
+  const dateObj = new Date(y, m-1, d);
+  document.getElementById('day-panel-title').innerText = dateObj.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+  document.getElementById('day-panel-total').innerText = brl(dayTotal(selectedDay));
+
+  const dueHere = state.debts.filter(d => d.dueDate === selectedDay);
+  const dueBox = document.getElementById('day-panel-due');
+  if(dueHere.length === 0){
+    dueBox.innerHTML = '';
+    dueBox.classList.add('hidden');
+  } else {
+    dueBox.classList.remove('hidden');
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    const dueDay = new Date(y, m-1, d); dueDay.setHours(0,0,0,0);
+    const daysLeft = Math.round((dueDay - startOfToday) / 86400000);
+    dueBox.innerHTML = `
+      <p class="text-[11px] tracking-wide mb-2" style="color:var(--danger);">Vence neste dia</p>
+      ${dueHere.map(deb => {
+        const meta = CATEGORY_META[deb.category];
+        const pace = daysLeft > 0 ? deb.amount / daysLeft : null;
+        const paceLabel = daysLeft > 0
+          ? `guarde ${brl(pace)}/dia até lá para juntar o valor`
+          : (daysLeft === 0 ? 'vence hoje' : `venceu há ${Math.abs(daysLeft)} dia${Math.abs(daysLeft)===1?'':'s'}`);
+        return `
+          <div class="flex justify-between items-center p-2.5 rounded-xl mb-1.5" style="background:var(--surface-2);border:1px solid var(--line);">
+            <div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:${meta.color}22;color:${meta.color};">${meta.label}</span>
+              <p class="text-sm font-medium mt-1">${escapeHtml(deb.name)}</p>
+              <p class="text-[10px] text-[var(--text-faint)] mt-0.5">${paceLabel}</p>
+            </div>
+            <p class="serif num" style="color:${meta.color};">${brl(deb.amount)}</p>
+          </div>`;
+      }).join('')}
+    `;
+  }
+
+  const entries = state.incomes.filter(i => i.date === selectedDay);
+  const list = document.getElementById('day-panel-entries');
+  if(entries.length === 0){
+    list.innerHTML = `<p class="text-[12px] text-[var(--text-faint)]">Nenhum ganho registrado neste dia.</p>`;
+  } else {
+    list.innerHTML = entries.map(e => `
+      <div class="flex justify-between items-center text-sm">
+        <span class="num">${brl(e.amount)}</span>
+        <button onclick="deleteIncome(${e.id})" class="text-[11px] text-[var(--text-faint)] underline">remover</button>
+      </div>`).join('');
+  }
+}
+
+function handleAddIncomeForDay(e){
+  e.preventDefault();
+  const input = document.getElementById('day-income-amount');
+  const val = parseFloat(input.value);
+  if(val > 0 && selectedDay){
+    state.incomes.push({ id: generateId(), amount: val, date: selectedDay });
+    input.value = '';
+    saveState();
+  }
+}
+
+function deleteIncome(id){
+  state.incomes = state.incomes.filter(i => i.id !== id);
+  saveState();
+}
+
+// ---------- Settings ----------
+
+function saveSettings(){
+  const monthlyGoal = parseFloat(document.getElementById('settings-monthly-goal').value);
+  const livingCost = parseFloat(document.getElementById('settings-living-cost').value);
+  if(monthlyGoal > 0) state.settings.monthlyGoal = monthlyGoal;
+  if(livingCost >= 0) state.settings.livingCost = livingCost;
+  saveState();
+  switchTab('dashboard');
+}
+
+function exportBackup(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `backup-plano-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!confirm("Importar este backup vai substituir todos os dados atuais. Continuar?")) return;
+      state = migrate(parsed);
+      saveState();
+      switchTab('dashboard');
+    } catch(err){
+      alert("Não consegui ler esse arquivo de backup.");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ---------- Render ----------
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 function render(){
   const now = new Date();
   const today = todayISO();
   const curMonth = monthKey(today);
+  const goal = dailyGoal();
 
   const warnEl = document.getElementById('storage-warning');
   if(warnEl) warnEl.classList.toggle('hidden', storageOk);
@@ -338,28 +700,99 @@ function render(){
     now.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
 
   // Daily
-  const dailyTotal = state.incomes.filter(i => i.date === today).reduce((a,i)=>a+i.amount, 0);
+  const dailyTotal = dayTotal(today);
   document.getElementById('daily-earned').innerText = brl(dailyTotal);
-  document.getElementById('goal-target').innerText = brl(state.dailyGoal);
-  const dailyPct = Math.min(100, Math.round((dailyTotal / state.dailyGoal) * 100));
+  document.getElementById('goal-target').innerText = brl(goal);
+  const dailyPct = goal > 0 ? Math.min(100, Math.round((dailyTotal / goal) * 100)) : 0;
   document.getElementById('daily-bar').style.width = dailyPct + '%';
   document.getElementById('daily-progress-text').innerText = `${dailyPct}% da meta de hoje`;
-  const remaining = Math.max(0, state.dailyGoal - dailyTotal);
-  document.getElementById('daily-remaining').innerText = remaining > 0 ? `faltam ${brl(remaining)}` : 'meta batida';
+  const remaining = Math.max(0, goal - dailyTotal);
+  document.getElementById('daily-remaining').innerText = remaining > 0.005 ? `faltam ${brl(remaining)}` : 'meta batida';
 
-  // Monthly (current calendar month only)
+  // Monthly
   const monthlyTotal = state.incomes.filter(i => monthKey(i.date) === curMonth).reduce((a,i)=>a+i.amount, 0);
   document.getElementById('total-earned-month').innerText = brl(monthlyTotal);
   const dayOfMonth = now.getDate();
-  const expectedByNow = state.dailyGoal * dayOfMonth;
-  const pace = monthlyTotal >= expectedByNow ? 'no ritmo da meta' : `${brl(expectedByNow - monthlyTotal)} atrás do ritmo`;
-  document.getElementById('month-pace').innerText = pace;
+  const expectedByNow = goal * dayOfMonth;
+  document.getElementById('month-pace').innerText = monthlyTotal >= expectedByNow
+    ? 'no ritmo da meta'
+    : `${brl(expectedByNow - monthlyTotal)} atrás do ritmo`;
 
-  // Debts total
-  const activeDebts = state.debts.reduce((a,d)=>a+d.amount, 0);
-  document.getElementById('total-debts-active').innerText = brl(activeDebts);
-  document.getElementById('debts-count-label').innerText =
-    state.debts.length === 0 ? 'tudo quitado' : `${state.debts.length} em aberto`;
+  // Streak
+  let streak = 0;
+  let cursor = new Date();
+  while(true){
+    const iso = cursor.getFullYear() + '-' + String(cursor.getMonth()+1).padStart(2,'0') + '-' + String(cursor.getDate()).padStart(2,'0');
+    if(dayTotal(iso) >= goal && goal > 0){ streak++; cursor.setDate(cursor.getDate()-1); }
+    else break;
+  }
+  document.getElementById('streak-count').innerText = `${streak} ${streak===1 ? 'dia' : 'dias'}`;
+  document.getElementById('streak-label').innerText = streak > 0 ? 'seguidos batendo a meta' : 'bata a meta hoje para começar';
+
+  // Week chart
+  const days = [];
+  for(let i=6; i>=0; i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    const iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    days.push({ iso, total: dayTotal(iso), label: d.toLocaleDateString('pt-BR',{weekday:'narrow'}) });
+  }
+  const maxVal = Math.max(goal, ...days.map(d=>d.total), 1);
+  document.getElementById('week-chart').innerHTML = days.map(d => {
+    const h = Math.max(4, Math.round((d.total / maxVal) * 64));
+    const color = d.total >= goal ? 'var(--teal)' : (d.total > 0 ? 'var(--copper)' : 'var(--surface-3)');
+    return `
+      <div class="flex-1 flex flex-col items-center justify-end gap-1.5" style="height:100%;">
+        <div style="width:100%;max-width:22px;height:${h}px;background:${color};border-radius:5px;"></div>
+        <span class="text-[9px] text-[var(--text-faint)] uppercase">${d.label}</span>
+      </div>`;
+  }).join('');
+
+  // Overall progress
+  const currentRemaining = state.debts.reduce((a,d)=>a+d.amount,0);
+  const totalOriginal = Math.max(state.totalOriginalDebt, currentRemaining);
+  const paidPct = totalOriginal > 0 ? Math.round(((totalOriginal - currentRemaining) / totalOriginal) * 100) : 100;
+  document.getElementById('overall-pct').innerText = `${paidPct}%`;
+  document.getElementById('overall-bar').style.width = `${paidPct}%`;
+  document.getElementById('overall-detail').innerText = `${brl(totalOriginal - currentRemaining)} quitados de ${brl(totalOriginal)}`;
+
+  // Upcoming due dates
+  const upcomingSection = document.getElementById('upcoming-section');
+  const upcomingList = document.getElementById('upcoming-list');
+  const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+  const withDueDates = state.debts
+    .filter(d => d.dueDate)
+    .map(d => {
+      const [y,m,dd] = d.dueDate.split('-').map(Number);
+      const dueDay = new Date(y, m-1, dd); dueDay.setHours(0,0,0,0);
+      const daysLeft = Math.round((dueDay - startOfToday) / 86400000);
+      return { ...d, daysLeft };
+    })
+    .sort((a,b) => a.daysLeft - b.daysLeft);
+
+  if(withDueDates.length === 0){
+    upcomingSection.classList.add('hidden');
+  } else {
+    upcomingSection.classList.remove('hidden');
+    upcomingList.innerHTML = withDueDates.slice(0,5).map(d => {
+      const meta = CATEGORY_META[d.category];
+      const overdue = d.daysLeft < 0;
+      const dueLabel = overdue
+        ? `atrasada há ${Math.abs(d.daysLeft)} dia${Math.abs(d.daysLeft)===1?'':'s'}`
+        : d.daysLeft === 0
+          ? 'vence hoje'
+          : `em ${d.daysLeft} dia${d.daysLeft===1?'':'s'} · ${brl(d.amount / d.daysLeft)}/dia`;
+      return `
+        <button onclick="goToDueDate('${d.dueDate}')" class="w-full flex justify-between items-center p-2.5 rounded-xl" style="background:var(--surface-2);border:1px solid var(--line);">
+          <div class="text-left">
+            <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:${meta.color}22;color:${meta.color};">${meta.label}</span>
+            <p class="text-sm font-medium mt-1">${escapeHtml(d.name)}</p>
+            <p class="text-[10px] mt-0.5" style="color:${overdue ? 'var(--danger)' : 'var(--text-faint)'};">${dueLabel}</p>
+          </div>
+          <p class="serif num" style="color:${meta.color};">${brl(d.amount)}</p>
+        </button>`;
+    }).join('');
+  }
 
   // Priority focus
   const priorityContainer = document.getElementById('priority-focus');
@@ -382,6 +815,7 @@ function render(){
   }
 
   // Category breakdown
+  const activeDebts = currentRemaining;
   const breakdown = document.getElementById('category-breakdown');
   breakdown.innerHTML = CATEGORY_ORDER.map(cat => {
     const items = state.debts.filter(d => d.category === cat);
@@ -403,33 +837,60 @@ function render(){
   // Debts list
   const debtsList = document.getElementById('debts-list');
   if(state.debts.length === 0){
-    debtsList.innerHTML = `<p class="text-sm text-[var(--text-dim)] text-center py-8">Nenhuma dívida registrada.</p>`;
+    debtsList.innerHTML = `<p class="text-sm text-[var(--text-dim)] text-center py-8">Nenhuma dívida em aberto.</p>`;
   } else {
     debtsList.innerHTML = [...state.debts]
       .sort((a,b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category))
       .map(d => {
         const meta = CATEGORY_META[d.category];
+        const pctPaid = d.originalAmount > 0 ? Math.round(((d.originalAmount - d.amount) / d.originalAmount) * 100) : 0;
         return `
-          <div class="card p-4 flex justify-between items-center">
-            <div>
-              <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:${meta.color}22;color:${meta.color};">${meta.label}</span>
-              <p class="text-sm font-medium mt-1.5">${escapeHtml(d.name)}</p>
-              <div class="flex gap-3 mt-1.5">
-                <button onclick="toggleDebtModal(${d.id})" class="text-[11px] text-[var(--text-dim)] underline">editar</button>
-                <button onclick="deleteDebt(${d.id})" class="text-[11px] text-[var(--text-dim)] underline">remover</button>
+          <div class="card p-4">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:${meta.color}22;color:${meta.color};">${meta.label}</span>
+                <p class="text-sm font-medium mt-1.5">${escapeHtml(d.name)}</p>
+              </div>
+              <div class="text-right">
+                <p class="serif num text-lg">${brl(d.amount)}</p>
+                <button onclick="payPartialDebt(${d.id})" class="text-[11px] mt-1 font-medium" style="color:var(--copper);">registrar pagamento</button>
               </div>
             </div>
-            <div class="text-right">
-              <p class="serif num text-lg">${brl(d.amount)}</p>
-              <button onclick="payPartialDebt(${d.id})" class="text-[11px] mt-1 font-medium" style="color:var(--copper);">registrar pagamento</button>
+            ${pctPaid > 0 ? `
+              <div class="w-full h-1 rounded-full mt-3" style="background:var(--surface-2);">
+                <div class="h-full rounded-full" style="width:${pctPaid}%;background:${meta.color};"></div>
+              </div>
+              <p class="text-[10px] text-[var(--text-faint)] mt-1">${pctPaid}% já quitado</p>
+            ` : ''}
+            <div class="flex gap-3 mt-3">
+              <button onclick="toggleDebtModal(${d.id})" class="text-[11px] text-[var(--text-dim)] underline">editar</button>
+              <button onclick="deleteDebt(${d.id})" class="text-[11px] text-[var(--text-dim)] underline">remover</button>
             </div>
           </div>`;
       }).join('');
   }
-}
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  // Paid off list
+  const paidSection = document.getElementById('paid-off-section');
+  const paidList = document.getElementById('paid-off-list');
+  if(state.paidOffDebts.length > 0){
+    paidSection.classList.remove('hidden');
+    paidList.innerHTML = state.paidOffDebts.slice(0,10).map(d => `
+      <div class="flex justify-between items-center px-1 py-1.5 text-sm">
+        <span class="text-[var(--text-dim)]">${escapeHtml(d.name)}</span>
+        <span class="num" style="color:var(--teal);">${brl(d.originalAmount)} quitado</span>
+      </div>`).join('');
+  } else {
+    paidSection.classList.add('hidden');
+  }
+
+  // Plan tab paces
+  document.getElementById('plan-pace-22').innerText = `${brl(state.settings.monthlyGoal/22)} / dia`;
+  document.getElementById('plan-pace-30').innerText = `${brl(state.settings.monthlyGoal/30)} / dia`;
+
+  if(document.getElementById('tab-calendar') && !document.getElementById('tab-calendar').classList.contains('hidden')){
+    renderCalendar();
+  }
 }
 
 render();
