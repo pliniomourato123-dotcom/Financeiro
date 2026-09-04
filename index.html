@@ -1,580 +1,438 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Gerenciador Financeiro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 5rem); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Plano de Quitação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#14151b;
+    --surface:#1c1e26;
+    --surface-2:#23252f;
+    --line:#2f313d;
+    --copper:#c98a55;
+    --copper-dim:#8a6440;
+    --teal:#5fa697;
+    --danger:#c1584f;
+    --text:#ece9e2;
+    --text-dim:#93949f;
+  }
+  *{-webkit-tap-highlight-color:transparent;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh;
+    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+  .serif{font-family:'Fraunces',serif;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;}
+  .divider{border-color:var(--line);}
+  ::-webkit-scrollbar{display:none;}
+  .tabpanel{animation:rise .35s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){.tabpanel{animation:none;}}
+  input:focus, select:focus{outline:none;border-color:var(--copper);}
+  .nav-btn{color:var(--text-dim);transition:color .2s ease;}
+  .nav-btn.active{color:var(--copper);}
+  .num{font-variant-numeric:tabular-nums;}
+</style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-safe">
+<body>
 
-    <!-- Header -->
-    <header class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-4 flex justify-between items-center">
-        <div>
-            <h1 class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Meu Painel Financeiro</h1>
-            <p class="text-lg font-bold" id="header-date">Carregando...</p>
-        </div>
-        <button onclick="resetData()" class="text-xs bg-slate-800 text-slate-400 px-3 py-1.5 rounded-lg border border-slate-700 hover:text-rose-400">Resetar</button>
-    </header>
+<header class="sticky top-0 z-10 backdrop-blur-md bg-[#14151bcc] border-b divider px-5 pt-5 pb-4">
+  <div class="max-w-md mx-auto flex items-end justify-between">
+    <div>
+      <p class="text-[11px] tracking-wide text-[var(--text-dim)]" id="header-date">—</p>
+      <h1 class="serif text-2xl leading-none mt-1">Plano de quitação</h1>
+    </div>
+    <button onclick="confirmReset()" class="text-[11px] text-[var(--text-dim)] border divider rounded-full px-3 py-1.5 hover:text-[var(--danger)] hover:border-[var(--danger)] transition-colors">Reiniciar</button>
+  </div>
+</header>
 
-    <!-- Main Container -->
-    <main class="p-4 max-w-md mx-auto space-y-6">
+<main class="max-w-md mx-auto px-5 pt-5 space-y-5">
 
-        <!-- TAB 1: DASHBOARD -->
-        <section id="tab-dashboard" class="space-y-4">
-            <!-- Meta Diária Card -->
-            <div class="bg-gradient-to-br from-emerald-950/60 to-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-xl">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Meta Diária (R$ 133,33)</span>
-                    <span id="daily-status-badge" class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Hoje</span>
-                </div>
-                <div class="flex items-baseline justify-between my-2">
-                    <span class="text-3xl font-extrabold text-white" id="daily-earned">R$ 0,00</span>
-                    <span class="text-xs text-slate-400" id="daily-progress-text">0% da meta</span>
-                </div>
-                <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700/50">
-                    <div id="daily-bar" class="bg-emerald-500 h-full transition-all duration-500" style="width: 0%"></div>
-                </div>
-                <!-- Add Income Form -->
-                <form onsubmit="handleAddIncome(event)" class="mt-4 flex gap-2">
-                    <input type="number" step="0.01" id="income-amount" placeholder="Ganho de hoje (ex: 150)" required class="flex-1 bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
-                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1">
-                        <i class="fa-solid fa-plus"></i> Add
-                    </button>
-                </form>
-            </div>
+  <div id="storage-warning" class="hidden text-[12px] rounded-xl px-3 py-2.5" style="background:#c1584f22;border:1px solid var(--danger);color:var(--danger);">
+    Este navegador está bloqueando o armazenamento local. Os botões funcionam, mas os dados não vão ficar salvos ao fechar a página — abra o arquivo direto no Safari/Chrome (fora de uma pré-visualização) para salvar de verdade.
+  </div>
 
-            <!-- Resumo Mensal / Semanal -->
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <p class="text-xs text-slate-400">Total Ganho (Mês)</p>
-                    <p class="text-xl font-bold text-emerald-400 mt-1" id="total-earned-month">R$ 0,00</p>
-                    <p class="text-[10px] text-slate-500 mt-1">Meta: R$ 4.000,00</p>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <p class="text-xs text-slate-400">Dívidas Ativas</p>
-                    <p class="text-xl font-bold text-rose-400 mt-1" id="total-debts-active">R$ 0,00</p>
-                    <p class="text-[10px] text-slate-500 mt-1">Prioridade: Pessoas</p>
-                </div>
-            </div>
+  <!-- DASHBOARD -->
+  <section id="tab-dashboard" class="tabpanel space-y-4">
 
-            <!-- Termômetro de Prioridades -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Foco Atual de Quitação
-                </h3>
-                <div id="priority-focus" class="space-y-2">
-                    <!-- Dynamic priority item loaded here -->
-                </div>
-            </div>
-        </section>
+    <div class="card p-5">
+      <div class="flex items-baseline justify-between">
+        <span class="text-[11px] tracking-wide text-[var(--text-dim)]">Meta de hoje</span>
+        <span class="text-[11px] tracking-wide text-[var(--text-dim)]" id="goal-target">R$ 133,33</span>
+      </div>
+      <div class="serif text-4xl mt-2 num" id="daily-earned">R$ 0,00</div>
+      <div class="w-full h-1.5 rounded-full bg-[var(--surface-2)] mt-4 overflow-hidden">
+        <div id="daily-bar" class="h-full rounded-full" style="width:0%;background:var(--copper);"></div>
+      </div>
+      <div class="flex justify-between mt-2 text-[11px] text-[var(--text-dim)]">
+        <span id="daily-progress-text">0% da meta de hoje</span>
+        <span id="daily-remaining">faltam R$ 133,33</span>
+      </div>
 
-        <!-- TAB 2: DÍVIDAS -->
-        <section id="tab-debts" class="space-y-4 hidden">
-            <div class="flex justify-between items-center">
-                <h2 class="text-base font-bold text-slate-200">Minhas Dívidas</h2>
-                <button onclick="toggleDebtModal()" class="text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-semibold">
-                    + Nova Dívida
-                </button>
-            </div>
-
-            <div id="debts-list" class="space-y-3">
-                <!-- Dynamic Debt Cards -->
-            </div>
-        </section>
-
-        <!-- TAB 3: PLANO & REGRAS -->
-        <section id="tab-plan" class="space-y-4 hidden">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">A Regra Ouro do Plano</h3>
-                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300">
-                    <p><strong class="text-rose-400">1. Pessoas em 1º Lugar:</strong> Levi, Mãe e Bárbara são prioridade total de segurança emocional.</p>
-                    <p><strong class="text-amber-400">2. Custo de Vida R$ 2.500:</strong> Mantenha o pé no chão. Tudo o que ultrapassar os R$ 2.500 vai direto pras dívidas.</p>
-                    <p><strong class="text-blue-400">3. A Geladeira:</strong> Nubank e PicPay esperam negociações futuras com até 90% de desconto.</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
-                <h3 class="text-sm font-bold text-slate-200">Metas de Produção Diária</h3>
-                <div class="text-xs text-slate-400 space-y-1">
-                    <div class="flex justify-between border-b border-slate-800 py-1.5">
-                        <span>Dia Útil (22 dias/mês)</span>
-                        <strong class="text-emerald-400">R$ 181,81 / dia</strong>
-                    </div>
-                    <div class="flex justify-between py-1.5">
-                        <span>Ininterrupto (30 dias/mês)</span>
-                        <strong class="text-emerald-400">R$ 133,33 / dia</strong>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Modal Nova Dívida -->
-    <div id="debt-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-xs space-y-4">
-            <h3 class="text-base font-bold text-white">Adicionar Dívida</h3>
-            <input type="text" id="debt-name" placeholder="Nome (Ex: Amigo X)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm">
-            <input type="number" step="0.01" id="debt-amount" placeholder="Valor Total (R$)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm">
-            <select id="debt-category" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-300">
-                <option value="pessoa">Pessoa (Alta Prioridade)</option>
-                <option value="instituicao">Instituição (Média)</option>
-                <option value="geladeira">Geladeira (Espera)</option>
-            </select>
-            <div class="flex gap-2 pt-2">
-                <button onclick="toggleDebtModal()" class="flex-1 bg-slate-800 text-slate-400 rounded-xl py-2 text-xs font-bold">Cancelar</button>
-                <button onclick="saveNewDebt()" class="flex-1 bg-emerald-600 text-white rounded-xl py-2 text-xs font-bold">Salvar</button>
-            </div>
-        </div>
+      <form onsubmit="handleAddIncome(event)" class="mt-4 flex gap-2">
+        <input type="number" step="0.01" min="0.01" id="income-amount" placeholder="Registrar ganho de hoje" required
+          class="flex-1 bg-[var(--surface-2)] border divider rounded-xl px-3 py-2.5 text-sm placeholder-[var(--text-dim)]">
+        <button type="submit" class="px-4 rounded-xl text-sm font-medium" style="background:var(--copper);color:#14151b;">Add</button>
+      </form>
     </div>
 
-    <!-- Navigation Bar (iOS Bottom Bar) -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-6 py-3 flex justify-around items-center z-40 max-w-md mx-auto">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 text-emerald-400">
-            <i class="fa-solid fa-chart-pie text-lg"></i>
-            <span class="text-[10px] font-medium">Painel</span>
-        </button>
-        <button onclick="switchTab('debts')" id="nav-debts" class="flex flex-col items-center gap-1 text-slate-500">
-            <i class="fa-solid fa-wallet text-lg"></i>
-            <span class="text-[10px] font-medium">Dívidas</span>
-        </button>
-        <button onclick="switchTab('plan')" id="nav-plan" class="flex flex-col items-center gap-1 text-slate-500">
-            <i class="fa-solid fa-bullseye text-lg"></i>
-            <span class="text-[10px] font-medium">Plano</span>
-        </button>
-    </nav>
-
-    <script>
-        const DEFAULT_DEBTS = [
-            { id: 1, name: "Levi", amount: 400.00, category: "pessoa" },
-            { id: 2, name: "Mãe", amount: 608.81, category: "pessoa" },
-            { id: 3, name: "Bárbara", amount: 600.00, category: "pessoa" },
-            { id: 4, name: "Jeitto", amount: 710.35, category: "instituicao" },
-            { id: 5, name: "Infinity (Total Set/Out/Nov)", amount: 2027.91, category: "instituicao" },
-            { id: 6, name: "Nubank", amount: 3440.00, category: "geladeira" },
-            { id: 7, name: "PicPay", amount: 1600.00, category: "geladeira" }
-        ];
-
-        let state = {
-            debts: JSON.parse(localStorage.getItem('fin_debts')) || DEFAULT_DEBTS,
-            incomes: JSON.parse(localStorage.getItem('fin_incomes')) || [],
-            dailyGoal: 133.33
-        };
-
-        function saveState() {
-            localStorage.setItem('fin_debts', JSON.stringify(state.debts));
-            localStorage.setItem('fin_incomes', JSON.stringify(state.incomes));
-            render();
-        }
-
-        function resetData() {
-            if (confirm("Deseja resetar todas as dívidas e ganhos para o padrão inicial?")) {
-                localStorage.clear();
-                state.debts = DEFAULT_DEBTS;
-                state.incomes = [];
-                saveState();
-            }
-        }
-
-        function switchTab(tab) {
-            ['dashboard', 'debts', 'plan'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.add('hidden');
-                document.getElementById(`nav-${t}`).className = "flex flex-col items-center gap-1 text-slate-500";
-            });
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`nav-${tab}`).className = "flex flex-col items-center gap-1 text-emerald-400";
-        }
-
-        function handleAddIncome(e) {
-            e.preventDefault();
-            const val = parseFloat(document.getElementById('income-amount').value);
-            if (val > 0) {
-                const today = new Date().toISOString().split('T')[0];
-                state.incomes.push({ amount: val, date: today });
-                document.getElementById('income-amount').value = '';
-                saveState();
-            }
-        }
-
-        function payPartialDebt(id) {
-            const amount = prompt("Quanto deseja descontar/pagar desta dívida?");
-            const val = parseFloat(amount);
-            if (val > 0) {
-                state.debts = state.debts.map(d => {
-                    if (d.id === id) {
-                        const newAmount = Math.max(0, d.amount - val);
-                        return { ...d, amount: newAmount };
-                    }
-                    return d;
-                }).filter(d => d.amount > 0);
-                saveState();
-            }
-        }
-
-        function toggleDebtModal() {
-            document.getElementById('debt-modal').classList.toggle('hidden');
-        }
-
-        function saveNewDebt() {
-            const name = document.getElementById('debt-name').value;
-            const amount = parseFloat(document.getElementById('debt-amount').value);
-            const category = document.getElementById('debt-category').value;
-            if (name && amount > 0) {
-                state.debts.push({ id: Date.now(), name, amount, category });
-                toggleDebtModal();
-                document.getElementById('debt-name').value = '';
-                document.getElementById('debt-amount').value = '';
-                saveState();
-            }
-        }
-
-        function render() {
-            // Header Date
-            const now = new Date();
-            document.getElementById('header-date').innerText = now.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
-
-            // Calculate Incomes
-            const todayStr = now.toISOString().split('T')[0];
-            const dailyTotal = state.incomes
-                .filter(i => i.date === todayStr)
-                .reduce((acc, i) => acc + i.amount, 0);
-
-            const monthlyTotal = state.incomes
-                .reduce((acc, i) => acc + i.amount, 0);
-
-            // Render Dashboard Meta
-            document.getElementById('daily-earned').innerText = `R$ ${dailyTotal.toFixed(2)}`;
-            const pct = Math.min(100, Math.round((dailyTotal / state.dailyGoal) * 100));
-            document.getElementById('daily-bar').style.width = `${pct}%`;
-            document.getElementById('daily-progress-text').innerText = `${pct}% da meta`;
-
-            document.getElementById('total-earned-month').innerText = `R$ ${monthlyTotal.toFixed(2)}`;
-
-            // Calculate Total Active Debts
-            const activeDebts = state.debts.reduce((acc, d) => acc + d.amount, 0);
-            document.getElementById('total-debts-active').innerText = `R$ ${activeDebts.toFixed(2)}`;
-
-            // Render Priority Focus (First "pessoa" or first debt)
-            const priorityContainer = document.getElementById('priority-focus');
-            const topPriority = state.debts.find(d => d.category === 'pessoa') || state.debts[0];
-
-            if (topPriority) {
-                priorityContainer.innerHTML = `
-                    <div class="flex justify-between items-center p-3 bg-slate-950 rounded-xl border border-rose-500/30">
-                        <div>
-                            <span class="text-[10px] uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-md">Pagar Agora</span>
-                            <p class="text-sm font-bold text-white mt-1">${topPriority.name}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm font-bold text-rose-400">R$ ${topPriority.amount.toFixed(2)}</p>
-                            <button onclick="payPartialDebt(${topPriority.id})" class="text-[10px] text-emerald-400 underline mt-1">Abater valor</button>
-                        </div>
-                    </div>
-                `;
-            } else {
-                priorityContainer.innerHTML = `<p class="text-xs text-emerald-400 font-bold">🎉 Você quitou todas as dívidas!</p>`;
-            }
-
-            // Render Debts Tab
-            const debtsList = document.getElementById('debts-list');
-            debtsList.innerHTML = '';
-            
-            const categoryBadge = {
-                pessoa: '<span class="text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-md font-bold">Pessoa (Alta)</span>',
-                instituicao: '<span class="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md font-bold">Instituição</span>',
-                geladeira: '<span class="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-md font-bold">Geladeira</span>'
-            };
-
-            state.debts.forEach(d => {
-                debtsList.innerHTML += `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between items-center">
-                        <div class="Este é o projeto ideal para você ter controle total na palma da mão. Montei o código de um **Web App Responsivo (Single Page Application)** leve, moderno e pronto para rodar no Safari do seu iPhone, podendo ser adicionado à Tela de Início como se fosse um aplicativo nativo.
-
-Ele salva todos os seus dados direto no armazenamento interno do celular (`localStorage`), ou seja: **suas informações são privadas, gratuitas e não somem quando você fecha o navegador.**
-
-### O Código Único (`index.html`)
-
-Você só vai precisar criar um arquivo chamado `index.html` no seu repositório do GitHub e colar o código completo abaixo:
-
-```html
-<!DOCTYPE html>
-<html lang="pt-BR" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Metatags para transformar em PWA no iPhone -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Meu App Financeiro</title>
-    <!-- Tailwind CSS para o visual -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <!-- Ícones -->
-    <link href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css)" rel="stylesheet">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        .pb-safe { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
-        /* Esconder scrollbar */
-        ::-webkit-scrollbar { display: none; }
-    </style>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-safe">
-
-    <!-- Cabeçalho -->
-    <header class="sticky top-0 z-10 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-4 flex justify-between items-center">
-        <div>
-            <h1 class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Plano de Ação</h1>
-            <p class="text-lg font-bold" id="header-date">Carregando...</p>
-        </div>
-        <button onclick="resetData()" class="text-[10px] bg-slate-800 text-slate-400 px-3 py-1 rounded-lg border border-slate-700 hover:text-rose-400">Resetar Tudo</button>
-    </header>
-
-    <!-- Container Principal -->
-    <main class="p-4 max-w-md mx-auto space-y-6">
-
-        <!-- ABA 1: DASHBOARD -->
-        <section id="tab-dashboard" class="space-y-4 animate-fade-in">
-            <!-- Card Meta Diária -->
-            <div class="bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-lg">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold uppercase text-emerald-400 tracking-wider">Meta Diária (R$ 133,33)</span>
-                    <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Hoje</span>
-                </div>
-                <div class="flex items-baseline justify-between my-2">
-                    <span class="text-3xl font-extrabold text-white" id="daily-earned">R$ 0,00</span>
-                    <span class="text-xs text-slate-400" id="daily-progress-text">0% da meta</span>
-                </div>
-                <div class="w-full bg-slate-800 rounded-full h-3 mb-4 overflow-hidden border border-slate-700">
-                    <div id="daily-bar" class="bg-emerald-500 h-full transition-all duration-500" style="width: 0%"></div>
-                </div>
-                <!-- Formulário para adicionar ganho do dia -->
-                <form onsubmit="handleAddIncome(event)" class="flex gap-2">
-                    <input type="number" step="0.01" id="income-amount" placeholder="Ganho (Ex: 150)" required class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 text-white placeholder-slate-500">
-                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md shadow-emerald-900/20">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
-                </form>
-            </div>
-
-            <!-- Resumo Mensal & Dívidas -->
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <p class="text-xs text-slate-400">Ganhos no Mês</p>
-                    <p class="text-xl font-bold text-emerald-400 mt-1" id="total-earned-month">R$ 0,00</p>
-                    <p class="text-[10px] text-slate-500 mt-1">Meta Ideal: R$ 4.000</p>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <p class="text-xs text-slate-400">Total Devido</p>
-                    <p class="text-xl font-bold text-rose-400 mt-1" id="total-debts-active">R$ 0,00</p>
-                    <p class="text-[10px] text-slate-500 mt-1">Foco nas pessoas</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- ABA 2: DÍVIDAS -->
-        <section id="tab-debts" class="space-y-4 hidden animate-fade-in">
-            <div class="flex justify-between items-center">
-                <h2 class="text-base font-bold text-slate-200">Gerenciador de Dívidas</h2>
-                <button onclick="toggleDebtModal()" class="text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-semibold">
-                    <i class="fa-solid fa-plus"></i> Nova
-                </button>
-            </div>
-            
-            <div id="debts-list" class="space-y-3">
-                <!-- Dívidas injetadas via JavaScript aqui -->
-            </div>
-        </section>
-
-        <!-- ABA 3: ESTRATÉGIA -->
-        <section id="tab-plan" class="space-y-4 hidden animate-fade-in">
-            <h2 class="text-base font-bold text-slate-200">Lembretes do Plano</h2>
-            
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <h3 class="text-xs font-bold text-rose-400 uppercase tracking-wider"><i class="fa-solid fa-fire text-rose-500"></i> A Regra de Ouro</h3>
-                <p class="text-sm text-slate-300">Pessoas em primeiro lugar (Levi, Mãe, Bárbara). Bancos esperam. Tudo que passar do custo de vida de R$ 2.500 vai direto para abater o topo da lista.</p>
-            </div>
-            
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider"><i class="fa-solid fa-snowflake text-blue-500"></i> Geladeira (Espera)</h3>
-                <p class="text-sm text-slate-300">Nubank e PicPay. Não sofra por eles agora. Deixe caducar e aguarde feirões de renegociação (com até 90% de desconto) no ano que vem.</p>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Modal Nova Dívida -->
-    <div id="debt-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-xs space-y-4">
-            <h3 class="text-base font-bold text-white">Adicionar Dívida</h3>
-            <input type="text" id="debt-name" placeholder="Para quem? (Ex: João)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500">
-            <input type="number" step="0.01" id="debt-amount" placeholder="Valor Total (R$)" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500">
-            <select id="debt-category" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-300 focus:outline-none">
-                <option value="pessoa">Pessoa (Alta Prioridade)</option>
-                <option value="instituicao">Instituição (Média Prioridade)</option>
-                <option value="geladeira">Geladeira (Deixar para o futuro)</option>
-            </select>
-            <div class="flex gap-2 pt-2">
-                <button onclick="toggleDebtModal()" class="flex-1 bg-slate-800 text-slate-300 rounded-xl py-3 text-sm font-bold">Cancelar</button>
-                <button onclick="saveNewDebt()" class="flex-1 bg-emerald-600 text-white rounded-xl py-3 text-sm font-bold">Salvar</button>
-            </div>
-        </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="card p-4">
+        <p class="text-[11px] text-[var(--text-dim)]">Ganho no mês</p>
+        <p class="serif text-xl mt-1 num" id="total-earned-month">R$ 0,00</p>
+        <p class="text-[10px] text-[var(--text-dim)] mt-1" id="month-pace">—</p>
+      </div>
+      <div class="card p-4">
+        <p class="text-[11px] text-[var(--text-dim)]">Total em dívidas</p>
+        <p class="serif text-xl mt-1 num" style="color:var(--danger);" id="total-debts-active">R$ 0,00</p>
+        <p class="text-[10px] text-[var(--text-dim)] mt-1" id="debts-count-label">—</p>
+      </div>
     </div>
 
-    <!-- Navegação Inferior (App iOS) -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-slate-800 px-6 py-2 pb-safe flex justify-around items-center z-40 max-w-md mx-auto">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 text-emerald-400 py-2 w-16">
-            <i class="fa-solid fa-chart-pie text-xl"></i>
-            <span class="text-[10px] font-medium">Painel</span>
-        </button>
-        <button onclick="switchTab('debts')" id="nav-debts" class="flex flex-col items-center gap-1 text-slate-500 py-2 w-16 transition-colors">
-            <i class="fa-solid fa-wallet text-xl"></i>
-            <span class="text-[10px] font-medium">Dívidas</span>
-        </button>
-        <button onclick="switchTab('plan')" id="nav-plan" class="flex flex-col items-center gap-1 text-slate-500 py-2 w-16 transition-colors">
-            <i class="fa-solid fa-bullseye text-xl"></i>
-            <span class="text-[10px] font-medium">Regras</span>
-        </button>
-    </nav>
+    <div class="card p-4">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)] mb-3">Foco atual</h3>
+      <div id="priority-focus" class="space-y-2"></div>
+    </div>
 
-    <!-- Lógica JavaScript -->
-    <script>
-        // Dívidas iniciais conforme nossa conversa
-        const DEFAULT_DEBTS = [
-            { id: 1, name: "Levi", amount: 400.00, category: "pessoa" },
-            { id: 2, name: "Mãe", amount: 608.81, category: "pessoa" },
-            { id: 3, name: "Bárbara", amount: 600.00, category: "pessoa" },
-            { id: 4, name: "Jeitto", amount: 710.35, category: "instituicao" },
-            { id: 5, name: "Infinity (Total)", amount: 2027.91, category: "instituicao" },
-            { id: 6, name: "Nubank", amount: 3440.00, category: "geladeira" },
-            { id: 7, name: "PicPay", amount: 1600.00, category: "geladeira" }
-        ];
+    <div class="card p-4">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)] mb-3">Por categoria</h3>
+      <div id="category-breakdown" class="space-y-3"></div>
+    </div>
+  </section>
 
-        let state = {
-            debts: JSON.parse(localStorage.getItem('fin_debts')) || DEFAULT_DEBTS,
-            incomes: JSON.parse(localStorage.getItem('fin_incomes')) || [],
-            dailyGoal: 133.33
-        };
+  <!-- DÍVIDAS -->
+  <section id="tab-debts" class="tabpanel space-y-4 hidden">
+    <div class="flex justify-between items-center">
+      <h2 class="serif text-lg">Dívidas</h2>
+      <button onclick="toggleDebtModal()" class="text-[12px] border rounded-full px-3 py-1.5" style="border-color:var(--copper);color:var(--copper);">Nova dívida</button>
+    </div>
+    <div id="debts-list" class="space-y-3"></div>
+  </section>
 
-        function saveState() {
-            localStorage.setItem('fin_debts', JSON.stringify(state.debts));
-            localStorage.setItem('fin_incomes', JSON.stringify(state.incomes));
-            render();
-        }
+  <!-- PLANO -->
+  <section id="tab-plan" class="tabpanel space-y-4 hidden">
+    <h2 class="serif text-lg">Regras do plano</h2>
 
-        function resetData() {
-            if (confirm("Apagar todos os registros de renda e recomeçar as dívidas do zero?")) {
-                localStorage.clear();
-                state.debts = DEFAULT_DEBTS;
-                state.incomes = [];
-                saveState();
-            }
-        }
+    <div class="card p-4 space-y-3">
+      <div class="flex gap-3">
+        <span class="text-[10px] mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-full" style="background:var(--danger);color:#14151b;">1</span>
+        <p class="text-sm text-[var(--text-dim)] leading-relaxed"><span class="text-[var(--text)] font-medium">Pessoas em primeiro lugar.</span> Compromissos com pessoas próximas são prioridade de segurança emocional antes de qualquer instituição.</p>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-[10px] mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-full" style="background:var(--copper);color:#14151b;">2</span>
+        <p class="text-sm text-[var(--text-dim)] leading-relaxed"><span class="text-[var(--text)] font-medium">Custo de vida travado em R$ 2.500.</span> Tudo que ultrapassar isso no mês vai direto para abater o topo da lista.</p>
+      </div>
+      <div class="flex gap-3">
+        <span class="text-[10px] mt-0.5 shrink-0 w-5 h-5 flex items-center justify-center rounded-full" style="background:var(--teal);color:#14151b;">3</span>
+        <p class="text-sm text-[var(--text-dim)] leading-relaxed"><span class="text-[var(--text)] font-medium">Dívidas de instituição esperam.</span> Deixe para negociações futuras, geralmente com descontos altos em feirões de renegociação.</p>
+      </div>
+    </div>
 
-        function switchTab(tab) {
-            ['dashboard', 'debts', 'plan'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.add('hidden');
-                document.getElementById(`nav-${t}`).className = "flex flex-col items-center gap-1 text-slate-500 py-2 w-16 transition-colors";
-            });
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`nav-${tab}`).className = "flex flex-col items-center gap-1 text-emerald-400 py-2 w-16 transition-colors";
-        }
+    <div class="card p-4">
+      <h3 class="text-[11px] tracking-wide text-[var(--text-dim)] mb-3">Metas de produção diária</h3>
+      <div class="flex justify-between py-2 border-b divider text-sm">
+        <span class="text-[var(--text-dim)]">22 dias úteis / mês</span>
+        <strong class="num" style="color:var(--copper);">R$ 181,81 / dia</strong>
+      </div>
+      <div class="flex justify-between py-2 text-sm">
+        <span class="text-[var(--text-dim)]">30 dias corridos / mês</span>
+        <strong class="num" style="color:var(--copper);">R$ 133,33 / dia</strong>
+      </div>
+    </div>
+  </section>
+</main>
 
-        function handleAddIncome(e) {
-            e.preventDefault();
-            const val = parseFloat(document.getElementById('income-amount').value);
-            if (val > 0) {
-                const today = new Date().toLocaleDateString('pt-BR');
-                state.incomes.push({ amount: val, date: today });
-                document.getElementById('income-amount').value = '';
-                saveState();
-            }
-        }
+<!-- MODAL NOVA / EDITAR DÍVIDA -->
+<div id="debt-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-5 hidden">
+  <div class="card p-5 w-full max-w-xs space-y-3">
+    <h3 class="serif text-lg" id="modal-title">Nova dívida</h3>
+    <input type="text" id="debt-name" placeholder="Nome" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-dim)]">
+    <input type="number" step="0.01" id="debt-amount" placeholder="Valor total (R$)" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm placeholder-[var(--text-dim)]">
+    <select id="debt-category" class="w-full bg-[var(--surface-2)] border divider rounded-xl p-3 text-sm text-[var(--text)]">
+      <option value="pessoa">Pessoa — alta prioridade</option>
+      <option value="instituicao">Instituição — média</option>
+      <option value="geladeira">Geladeira — aguardar</option>
+    </select>
+    <div class="flex gap-2 pt-1">
+      <button onclick="toggleDebtModal()" class="flex-1 border divider rounded-xl py-2.5 text-sm text-[var(--text-dim)]">Cancelar</button>
+      <button onclick="saveDebt()" class="flex-1 rounded-xl py-2.5 text-sm font-medium" style="background:var(--copper);color:#14151b;">Salvar</button>
+    </div>
+  </div>
+</div>
 
-        function payPartialDebt(id) {
-            const debt = state.debts.find(d => d.id === id);
-            const amount = prompt(`Quanto você pagou hoje para ${debt.name}? (R$)`);
-            if (amount !== null && !isNaN(amount) && amount > 0) {
-                state.debts = state.debts.map(d => {
-                    if (d.id === id) {
-                        return { ...d, amount: Math.max(0, d.amount - parseFloat(amount)) };
-                    }
-                    return d;
-                }).filter(d => d.amount > 0);
-                saveState();
-            }
-        }
+<nav class="fixed bottom-0 left-0 right-0 bg-[#1c1e26ee] backdrop-blur-md border-t divider px-8 py-2.5 flex justify-around max-w-md mx-auto" style="padding-bottom:calc(10px + env(safe-area-inset-bottom));">
+  <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active flex flex-col items-center gap-1 py-1 w-16">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 8h4v13h-4z"/></svg>
+    <span class="text-[10px]">Painel</span>
+  </button>
+  <button onclick="switchTab('debts')" id="nav-debts" class="nav-btn flex flex-col items-center gap-1 py-1 w-16">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18v12a1 1 0 01-1 1H4a1 1 0 01-1-1V7z"/><path d="M3 7l3-4h12l3 4"/><circle cx="16" cy="13" r="1.3"/></svg>
+    <span class="text-[10px]">Dívidas</span>
+  </button>
+  <button onclick="switchTab('plan')" id="nav-plan" class="nav-btn flex flex-col items-center gap-1 py-1 w-16">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>
+    <span class="text-[10px]">Plano</span>
+  </button>
+</nav>
 
-        function toggleDebtModal() {
-            document.getElementById('debt-modal').classList.toggle('hidden');
-        }
+<script>
+const DEFAULT_DEBTS = [
+  { id: 1, name: "Levi", amount: 400.00, category: "pessoa" },
+  { id: 2, name: "Mãe", amount: 608.81, category: "pessoa" },
+  { id: 3, name: "Bárbara", amount: 600.00, category: "pessoa" },
+  { id: 4, name: "Jeitto", amount: 710.35, category: "instituicao" },
+  { id: 5, name: "Infinity (set/out/nov)", amount: 2027.91, category: "instituicao" },
+  { id: 6, name: "Nubank", amount: 3440.00, category: "geladeira" },
+  { id: 7, name: "PicPay", amount: 1600.00, category: "geladeira" }
+];
 
-        function saveNewDebt() {
-            const name = document.getElementById('debt-name').value;
-            const amount = parseFloat(document.getElementById('debt-amount').value);
-            const category = document.getElementById('debt-category').value;
-            if (name && amount > 0) {
-                state.debts.push({ id: Date.now(), name, amount, category });
-                toggleDebtModal();
-                document.getElementById('debt-name').value = '';
-                document.getElementById('debt-amount').value = '';
-                saveState();
-            }
-        }
+let state = {
+  debts: safeParse('fin_debts', DEFAULT_DEBTS),
+  incomes: safeParse('fin_incomes', []),
+  dailyGoal: 133.33,
+  monthlyGoal: 4000
+};
+let editingDebtId = null;
 
-        function render() {
-            // Data do cabeçalho
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('pt-BR');
-            document.getElementById('header-date').innerText = now.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).replace('.', '');
+let storageOk = true;
 
-            // Cálculos
-            const dailyTotal = state.incomes.filter(i => i.date === dateStr).reduce((acc, i) => acc + i.amount, 0);
-            const monthlyTotal = state.incomes.reduce((acc, i) => acc + i.amount, 0); // Simplificado para total histórico neste exemplo
-            const activeDebts = state.debts.reduce((acc, d) => acc + d.amount, 0);
+function safeParse(key, fallback){
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch(e){ storageOk = false; return fallback; }
+}
 
-            // Atualiza Dashboard
-            document.getElementById('daily-earned').innerText = `R$ ${dailyTotal.toFixed(2)}`;
-            const pct = Math.min(100, Math.round((dailyTotal / state.dailyGoal) * 100));
-            document.getElementById('daily-bar').style.width = `${pct}%`;
-            document.getElementById('daily-progress-text').innerText = `${pct}% da meta`;
-            document.getElementById('total-earned-month').innerText = `R$ ${monthlyTotal.toFixed(2)}`;
-            document.getElementById('total-debts-active').innerText = `R$ ${activeDebts.toFixed(2)}`;
+function safeSet(key, value){
+  try{ localStorage.setItem(key, value); }
+  catch(e){ storageOk = false; }
+}
 
-            // Atualiza Lista de Dívidas
-            const debtsList = document.getElementById('debts-list');
-            debtsList.innerHTML = '';
-            
-            const categoryStyles = {
-                pessoa: { text: 'Pessoa', color: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500/30' },
-                instituicao: { text: 'Instituição', color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30' },
-                geladeira: { text: 'Geladeira', color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30' }
-            };
+function saveState(){
+  // Never let a storage failure block the UI from updating.
+  safeSet('fin_debts', JSON.stringify(state.debts));
+  safeSet('fin_incomes', JSON.stringify(state.incomes));
+  render();
+}
 
-            state.debts.forEach(d => {
-                const cat = categoryStyles[d.category];
-                debtsList.innerHTML += `
-                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex justify-between items-center shadow-md">
-                        <div>
-                            <span class="text-[10px] ${cat.bg} ${cat.color} ${cat.border} border px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">${cat.text}</span>
-                            <p class="text-sm font-bold text-white mt-1">${d.name}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm font-bold text-slate-200">R$ ${d.amount.toFixed(2)}</p>
-                            <button onclick="payPartialDebt(${d.id})" class="text-[11px] text-emerald-400 underline mt-1 font-semibold">Reg. Pagamento</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
+function confirmReset(){
+  if(confirm("Isso apaga todos os ganhos registrados e restaura a lista de dívidas original. Continuar?")){
+    try{ localStorage.clear(); } catch(e){ storageOk = false; }
+    state.debts = JSON.parse(JSON.stringify(DEFAULT_DEBTS));
+    state.incomes = [];
+    saveState();
+  }
+}
 
-        // Inicia a aplicação
-        render();
-    </script>
+function switchTab(tab){
+  ['dashboard','debts','plan'].forEach(t=>{
+    document.getElementById(`tab-${t}`).classList.add('hidden');
+    document.getElementById(`nav-${t}`).classList.remove('active');
+  });
+  document.getElementById(`tab-${tab}`).classList.remove('hidden');
+  document.getElementById(`nav-${tab}`).classList.add('active');
+}
+
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function monthKey(iso){ return iso.slice(0,7); }
+
+function handleAddIncome(e){
+  e.preventDefault();
+  const input = document.getElementById('income-amount');
+  const val = parseFloat(input.value);
+  if(val > 0){
+    state.incomes.push({ amount: val, date: todayISO() });
+    input.value = '';
+    saveState();
+  }
+}
+
+function brl(n){
+  return n.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+
+function toggleDebtModal(prefillId){
+  const modal = document.getElementById('debt-modal');
+  if(modal.classList.contains('hidden')){
+    if(prefillId){
+      const d = state.debts.find(x=>x.id===prefillId);
+      editingDebtId = prefillId;
+      document.getElementById('modal-title').innerText = 'Editar dívida';
+      document.getElementById('debt-name').value = d.name;
+      document.getElementById('debt-amount').value = d.amount;
+      document.getElementById('debt-category').value = d.category;
+    } else {
+      editingDebtId = null;
+      document.getElementById('modal-title').innerText = 'Nova dívida';
+      document.getElementById('debt-name').value = '';
+      document.getElementById('debt-amount').value = '';
+      document.getElementById('debt-category').value = 'pessoa';
+    }
+    modal.classList.remove('hidden');
+  } else {
+    modal.classList.add('hidden');
+  }
+}
+
+function saveDebt(){
+  const name = document.getElementById('debt-name').value.trim();
+  const amount = parseFloat(document.getElementById('debt-amount').value);
+  const category = document.getElementById('debt-category').value;
+  if(!name || !(amount > 0)) return;
+
+  if(editingDebtId){
+    state.debts = state.debts.map(d => d.id === editingDebtId ? { ...d, name, amount, category } : d);
+  } else {
+    state.debts.push({ id: Date.now(), name, amount, category });
+  }
+  toggleDebtModal();
+  saveState();
+}
+
+function deleteDebt(id){
+  if(confirm("Remover esta dívida da lista?")){
+    state.debts = state.debts.filter(d => d.id !== id);
+    saveState();
+  }
+}
+
+function payPartialDebt(id){
+  const debt = state.debts.find(d => d.id === id);
+  const amount = prompt(`Quanto foi abatido de "${debt.name}"? (R$)`);
+  if(amount === null) return;
+  const val = parseFloat(amount.replace(',', '.'));
+  if(val > 0){
+    state.debts = state.debts
+      .map(d => d.id === id ? { ...d, amount: Math.max(0, d.amount - val) } : d)
+      .filter(d => d.amount > 0.005);
+    saveState();
+  }
+}
+
+const CATEGORY_META = {
+  pessoa:      { label: 'Pessoa',      color: 'var(--danger)' },
+  instituicao: { label: 'Instituição', color: 'var(--copper)' },
+  geladeira:   { label: 'Geladeira',   color: 'var(--teal)'   }
+};
+const CATEGORY_ORDER = ['pessoa', 'instituicao', 'geladeira'];
+
+function render(){
+  const now = new Date();
+  const today = todayISO();
+  const curMonth = monthKey(today);
+
+  const warnEl = document.getElementById('storage-warning');
+  if(warnEl) warnEl.classList.toggle('hidden', storageOk);
+
+  document.getElementById('header-date').innerText =
+    now.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+
+  // Daily
+  const dailyTotal = state.incomes.filter(i => i.date === today).reduce((a,i)=>a+i.amount, 0);
+  document.getElementById('daily-earned').innerText = brl(dailyTotal);
+  document.getElementById('goal-target').innerText = brl(state.dailyGoal);
+  const dailyPct = Math.min(100, Math.round((dailyTotal / state.dailyGoal) * 100));
+  document.getElementById('daily-bar').style.width = dailyPct + '%';
+  document.getElementById('daily-progress-text').innerText = `${dailyPct}% da meta de hoje`;
+  const remaining = Math.max(0, state.dailyGoal - dailyTotal);
+  document.getElementById('daily-remaining').innerText = remaining > 0 ? `faltam ${brl(remaining)}` : 'meta batida';
+
+  // Monthly (current calendar month only)
+  const monthlyTotal = state.incomes.filter(i => monthKey(i.date) === curMonth).reduce((a,i)=>a+i.amount, 0);
+  document.getElementById('total-earned-month').innerText = brl(monthlyTotal);
+  const dayOfMonth = now.getDate();
+  const expectedByNow = state.dailyGoal * dayOfMonth;
+  const pace = monthlyTotal >= expectedByNow ? 'no ritmo da meta' : `${brl(expectedByNow - monthlyTotal)} atrás do ritmo`;
+  document.getElementById('month-pace').innerText = pace;
+
+  // Debts total
+  const activeDebts = state.debts.reduce((a,d)=>a+d.amount, 0);
+  document.getElementById('total-debts-active').innerText = brl(activeDebts);
+  document.getElementById('debts-count-label').innerText =
+    state.debts.length === 0 ? 'tudo quitado' : `${state.debts.length} em aberto`;
+
+  // Priority focus
+  const priorityContainer = document.getElementById('priority-focus');
+  const topPriority = CATEGORY_ORDER.map(cat => state.debts.find(d => d.category === cat)).find(Boolean);
+  if(topPriority){
+    const meta = CATEGORY_META[topPriority.category];
+    priorityContainer.innerHTML = `
+      <div class="flex justify-between items-center p-3 rounded-xl" style="background:var(--surface-2);border:1px solid var(--line);">
+        <div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:${meta.color}22;color:${meta.color};">${meta.label}</span>
+          <p class="text-sm font-medium mt-1.5">${escapeHtml(topPriority.name)}</p>
+        </div>
+        <div class="text-right">
+          <p class="serif num" style="color:${meta.color};">${brl(topPriority.amount)}</p>
+          <button onclick="payPartialDebt(${topPriority.id})" class="text-[11px] mt-1" style="color:var(--copper);">abater valor</button>
+        </div>
+      </div>`;
+  } else {
+    priorityContainer.innerHTML = `<p class="text-sm" style="color:var(--teal);">Todas as dívidas foram quitadas.</p>`;
+  }
+
+  // Category breakdown
+  const breakdown = document.getElementById('category-breakdown');
+  breakdown.innerHTML = CATEGORY_ORDER.map(cat => {
+    const items = state.debts.filter(d => d.category === cat);
+    const sum = items.reduce((a,d)=>a+d.amount,0);
+    const pct = activeDebts > 0 ? Math.round((sum/activeDebts)*100) : 0;
+    const meta = CATEGORY_META[cat];
+    return `
+      <div>
+        <div class="flex justify-between text-[12px] mb-1">
+          <span class="text-[var(--text-dim)]">${meta.label} · ${items.length}</span>
+          <span class="num">${brl(sum)}</span>
+        </div>
+        <div class="w-full h-1.5 rounded-full" style="background:var(--surface-2);">
+          <div class="h-full rounded-full" style="width:${pct}%;background:${meta.color};"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Debts list
+  const debtsList = document.getElementById('debts-list');
+  if(state.debts.length === 0){
+    debtsList.innerHTML = `<p class="text-sm text-[var(--text-dim)] text-center py-8">Nenhuma dívida registrada.</p>`;
+  } else {
+    debtsList.innerHTML = [...state.debts]
+      .sort((a,b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category))
+      .map(d => {
+        const meta = CATEGORY_META[d.category];
+        return `
+          <div class="card p-4 flex justify-between items-center">
+            <div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full" style="background:${meta.color}22;color:${meta.color};">${meta.label}</span>
+              <p class="text-sm font-medium mt-1.5">${escapeHtml(d.name)}</p>
+              <div class="flex gap-3 mt-1.5">
+                <button onclick="toggleDebtModal(${d.id})" class="text-[11px] text-[var(--text-dim)] underline">editar</button>
+                <button onclick="deleteDebt(${d.id})" class="text-[11px] text-[var(--text-dim)] underline">remover</button>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="serif num text-lg">${brl(d.amount)}</p>
+              <button onclick="payPartialDebt(${d.id})" class="text-[11px] mt-1 font-medium" style="color:var(--copper);">registrar pagamento</button>
+            </div>
+          </div>`;
+      }).join('');
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+render();
+</script>
 </body>
 </html>
